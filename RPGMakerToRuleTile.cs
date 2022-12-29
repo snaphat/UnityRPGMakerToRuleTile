@@ -10,9 +10,50 @@ public class RPGMakerToRuleTile
     const int fullSize = 48;
     const int halfSize = fullSize / 2;
 
+    [MenuItem("Assets/Create/RPGMaker/Animated Ground RuleTile", priority = 0)]
+    public static void CreateAnimatedGroundRuleTile()
+    {
+        foreach (var obj in Selection.objects)
+            Generate(obj, false);
+    }
+
+    [MenuItem("Assets/Create/RPGMaker/Ground RuleTile", priority = 0)]
+    public static void CreateGroundRuleTile()
+    {
+        foreach (var obj in Selection.objects)
+            Generate(obj, false);
+    }
+
+    [MenuItem("Assets/Create/RPGMaker/Wall RuleTile", priority = 0)]
+    public static void CreateWallRuleTile()
+    {
+        foreach (var obj in Selection.objects)
+            Generate(obj, true);
+    }
+
     static string GetScriptPath([System.Runtime.CompilerServices.CallerFilePath] string filename = null)
     {
         return Path.GetDirectoryName(filename[(Application.dataPath.Length - "Assets".Length)..]);
+    }
+
+    public static void SavePNG(Texture2D texture, string path)
+    {
+        // Encode texture into PNG
+        byte[] bytes = texture.EncodeToPNG();
+
+        // For testing purposes, also write to a file in the project folder
+        File.WriteAllBytes(path, bytes);
+
+        AssetDatabase.Refresh();
+    }
+
+    public static void SaveTileset(Texture2D texture, string path, bool isWall)
+    {
+        SavePNG(texture, path);
+        var preset = AssetDatabase.LoadAssetAtPath<Preset>(GetScriptPath() + "/" + (isWall ? "Wall" : "Ground") + "TextureImporter.preset");
+        var sprite = AssetImporter.GetAtPath(path);
+        preset.ApplyTo(sprite);
+        AssetDatabase.ImportAsset(path);
     }
 
     public static Texture2D FlipTextureVertically(Texture2D texture)
@@ -47,19 +88,19 @@ public class RPGMakerToRuleTile
         dst.SetPixels(x, y, src.width, src.height, src.GetPixels());
     }
 
-    public static Texture2D BuildTile(Texture2D topLeft, Texture2D topRight, Texture2D bottomLeft, Texture2D bottomRight, Texture2D wall = null)
+    public static Texture2D StichTile(Texture2D topLeft, Texture2D topRight, Texture2D bottomLeft, Texture2D bottomRight, Texture2D wall = null)
     {
         var texture = new Texture2D(topLeft.width * 2, topLeft.height * 2 + (wall == null ? 0 : topLeft.height * 4));
-        SetPixels(texture, topLeft, 0, 0);
-        SetPixels(texture, topRight, topLeft.width, 0);
-        SetPixels(texture, bottomLeft, 0, topLeft.height);
-        SetPixels(texture, bottomRight, topLeft.width, topLeft.height);
+        SetPixels(texture, topLeft,      0,             0);
+        SetPixels(texture, topRight,     topLeft.width, 0);
+        SetPixels(texture, bottomLeft,   0,             topLeft.height);
+        SetPixels(texture, bottomRight,  topLeft.width, topLeft.height);
 
         if (wall != null) SetPixels(texture, wall, 0, topLeft.height * 2);
         return texture;
     }
 
-    public static Texture2D BuildTileset(params Texture2D[] textures)
+    public static Texture2D StichTileset(params Texture2D[] textures)
     {
         var tileset = new Texture2D(textures[0].width * 47, textures[0].height);
 
@@ -73,72 +114,10 @@ public class RPGMakerToRuleTile
         return tileset;
     }
 
-    public static void SavePNG(Texture2D texture, string path)
+    public static Texture2D BuildTileset(Texture2D texture, bool isWall)
     {
-        // Encode texture into PNG
-        byte[] bytes = texture.EncodeToPNG();
-
-        // For testing purposes, also write to a file in the project folder
-        File.WriteAllBytes(path, bytes);
-
-        AssetDatabase.Refresh();
-    }
-
-    public static void SaveTileset(Texture2D texture, string path, bool isWall)
-    {
-        SavePNG(texture, path);
-        var preset = AssetDatabase.LoadAssetAtPath<Preset>(GetScriptPath() + "/" + (isWall ? "Wall" : "Ground") + "TextureImporter.preset");
-        var sprite = AssetImporter.GetAtPath(path);
-        preset.ApplyTo(sprite);
-        AssetDatabase.ImportAsset(path);
-    }
-
-    [MenuItem("Assets/Create/RPGMaker/Ground RuleTile", priority = 0)]
-    public static void CreateGroundRuleTile()
-    {
-        foreach(var obj in Selection.objects)
-            Generate(obj, false);
-    }
-
-    [MenuItem("Assets/Create/RPGMaker/Wall RuleTile", priority = 0)]
-    public static void CreateWallRuleTile()
-    {
-        foreach(var obj in Selection.objects)
-            Generate(obj, true);
-    }
-
-    public static void Generate(Object obj, bool isWall)
-    {
-        var input = obj as Texture2D;
-        if (input == null)
-        {
-            Debug.Log("<color=red>RPGMakerToRuleTile: Must select a Texture!</color>");
-            return;
-        }
-
-        // Copy texture (to get around read issues)
-        var filePath = AssetDatabase.GetAssetPath(input);
-        var rawData = File.ReadAllBytes(filePath);
-        input = new(2, 2);
-        input.LoadImage(rawData);
-
-        // Grab filename without path or suffix
-        var filePrefix = Path.GetFileNameWithoutExtension(filePath);
-
-        // Get texture folder
-        var dstPath = Path.GetDirectoryName(filePath);
-
-        // Create folder to hold rultile and tileset
-        if (!AssetDatabase.IsValidFolder(dstPath + "/" + filePrefix + ".RuleTile"))
-            AssetDatabase.CreateFolder(dstPath, filePrefix + ".RuleTile");
-        dstPath = dstPath + "/" + filePrefix + ".RuleTile";
-
-        // Setup tileset and ruletile paths
-        var tilesetPath = dstPath + "/" + filePrefix + ".png";
-        var ruleTilePath = dstPath + "/" + filePrefix + ".asset";
-
         // Invert Y access for easy coordinate mapping (textures index bottom-to-top, we want top-to-bottom)
-        input = FlipTextureVertically(input);
+        var input = FlipTextureVertically(texture);
 
         // Build single ceiling
         var tempCeilS = GetTexture2D(input,                   0, 0, fullSize,     fullSize);
@@ -209,83 +188,83 @@ public class RPGMakerToRuleTile
         if (isWall) SetPixels(wallS, tempWallS, 0, fullSize);
 
         // Empty
-        var empty = BuildTile(tempCeilBTRL,            tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
+        var empty = StichTile(tempCeilBTRL,            tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
 
         // Four corners
-        var cornerTBLR = BuildTile(tempCeilCornerTL,   tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
+        var cornerTBLR = StichTile(tempCeilCornerTL,   tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
 
         // Wall top-bottom edge, left-right edge
-        var wallTBE = BuildTile(tempCeilTTLR,          tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
-        var wallLRE = BuildTile(tempCeilTBLL,          tempCeilTBRR,     tempCeilBTLL,     tempCeilBTRR);
+        var wallTBE = StichTile(tempCeilTTLR,          tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallLRE = StichTile(tempCeilTBLL,          tempCeilTBRR,     tempCeilBTLL,     tempCeilBTRR);
 
         // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge, right-top-bottom edge
-        var wallTLRE = BuildTile(tempCeilTTLL,         tempCeilTTRR,     tempCeilTBLL,     tempCeilTBRR);
-        var wallBLRE = BuildTile(tempCeilBTLL,         tempCeilBTRR,     tempCeilBBLL,     tempCeilBBRR, tempWallS);
-        var wallLTBE = BuildTile(tempCeilTTLL,         tempCeilTTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
-        var wallRTBE = BuildTile(tempCeilTTRL,         tempCeilTTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        var wallTLRE = StichTile(tempCeilTTLL,         tempCeilTTRR,     tempCeilTBLL,     tempCeilTBRR);
+        var wallBLRE = StichTile(tempCeilBTLL,         tempCeilBTRR,     tempCeilBBLL,     tempCeilBBRR, tempWallS);
+        var wallLTBE = StichTile(tempCeilTTLL,         tempCeilTTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
+        var wallRTBE = StichTile(tempCeilTTRL,         tempCeilTTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
 
         // Wall top edge, bottom edge, left edge, right edge
-        var wallTE = BuildTile(tempCeilTTRL,           tempCeilTTLR,     tempCeilTBRL,     tempCeilTBLR);
-        var wallBE = BuildTile(tempCeilBTRL,           tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallM);
-        var wallLE = BuildTile(tempCeilBTLL,           tempCeilBTLR,     tempCeilTBLL,     tempCeilTBLR);
-        var wallRE = BuildTile(tempCeilBTRL,           tempCeilBTRR,     tempCeilTBRL,     tempCeilTBRR);
+        var wallTE = StichTile(tempCeilTTRL,           tempCeilTTLR,     tempCeilTBRL,     tempCeilTBLR);
+        var wallBE = StichTile(tempCeilBTRL,           tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallM);
+        var wallLE = StichTile(tempCeilBTLL,           tempCeilBTLR,     tempCeilTBLL,     tempCeilTBLR);
+        var wallRE = StichTile(tempCeilBTRL,           tempCeilBTRR,     tempCeilTBRL,     tempCeilTBRR);
 
         // Wall top edge left-right corners, bottom edge left-right corners, left edge top bottom corners, right edge top bottom corners
-        var wallTELRC = BuildTile(tempCeilTTLR,        tempCeilTTRL,     tempCeilCornerBL, tempCeilCornerBR);
-        var wallBELRC = BuildTile(tempCeilCornerTL,    tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
-        var wallLETBC = BuildTile(tempCeilTBLL,        tempCeilCornerTR, tempCeilBTLL,     tempCeilCornerBR);
-        var wallRETBC = BuildTile(tempCeilCornerTL,    tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
+        var wallTELRC = StichTile(tempCeilTTLR,        tempCeilTTRL,     tempCeilCornerBL, tempCeilCornerBR);
+        var wallBELRC = StichTile(tempCeilCornerTL,    tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallLETBC = StichTile(tempCeilTBLL,        tempCeilCornerTR, tempCeilBTLL,     tempCeilCornerBR);
+        var wallRETBC = StichTile(tempCeilCornerTL,    tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
 
         // Wall top corners, bottom corners, left corners, right corners 
-        var wallTC = BuildTile(tempCeilCornerTL,       tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
-        var wallBC = BuildTile(tempCeilBTRL,           tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
-        var wallLC = BuildTile(tempCeilCornerTL,       tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
-        var wallRC = BuildTile(tempCeilBTRL,           tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
+        var wallTC = StichTile(tempCeilCornerTL,       tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
+        var wallBC = StichTile(tempCeilBTRL,           tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
+        var wallLC = StichTile(tempCeilCornerTL,       tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
+        var wallRC = StichTile(tempCeilBTRL,           tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
 
         // Wall top-left edge, top-right edge, bottom-left edge, bottom-right edge
-        var wallTLE = BuildTile(tempCeilTTLL,          tempCeilTTLR,     tempCeilTBLL,     tempCeilTBLR);
-        var wallTRE = BuildTile(tempCeilTTRL,          tempCeilTTRR,     tempCeilTBRL,     tempCeilTBRR);
-        var wallBLE = BuildTile(tempCeilBTLL,          tempCeilBTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
-        var wallBRE = BuildTile(tempCeilBTRL,          tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        var wallTLE = StichTile(tempCeilTTLL,          tempCeilTTLR,     tempCeilTBLL,     tempCeilTBLR);
+        var wallTRE = StichTile(tempCeilTTRL,          tempCeilTTRR,     tempCeilTBRL,     tempCeilTBRR);
+        var wallBLE = StichTile(tempCeilBTLL,          tempCeilBTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
+        var wallBRE = StichTile(tempCeilBTRL,          tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
 
         // Wall top-left edge w/ corner, top-right edge w/ corner, bottom-left edge /w corner, bottom-right edge w/ corner
-        var wallTLEC = BuildTile(tempCeilTTLL,         tempCeilTTLR,     tempCeilTBLL,     tempCeilCornerBR);
-        var wallTREC = BuildTile(tempCeilTTRL,         tempCeilTTRR,     tempCeilCornerBL, tempCeilTBRR);
-        var wallBLEC = BuildTile(tempCeilBTLL,         tempCeilCornerTR, tempCeilBBLL,     tempCeilBBLR, tempWallL);
-        var wallBREC = BuildTile(tempCeilCornerTL,     tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        var wallTLEC = StichTile(tempCeilTTLL,         tempCeilTTLR,     tempCeilTBLL,     tempCeilCornerBR);
+        var wallTREC = StichTile(tempCeilTTRL,         tempCeilTTRR,     tempCeilCornerBL, tempCeilTBRR);
+        var wallBLEC = StichTile(tempCeilBTLL,         tempCeilCornerTR, tempCeilBBLL,     tempCeilBBLR, tempWallL);
+        var wallBREC = StichTile(tempCeilCornerTL,     tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
 
         // Wall top edge left corner, top edge right corner, bottom edge left corner, bottom edge right corner
-        var wallTELC = BuildTile(tempCeilTTLR,         tempCeilTTRL,     tempCeilCornerBL, tempCeilTBLR);
-        var wallTERC = BuildTile(tempCeilTTLR,         tempCeilTTRL,     tempCeilTBRL,     tempCeilCornerBR);
-        var wallBELC = BuildTile(tempCeilCornerTL,     tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
-        var wallBERC = BuildTile(tempCeilBTRL,         tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallTELC = StichTile(tempCeilTTLR,         tempCeilTTRL,     tempCeilCornerBL, tempCeilTBLR);
+        var wallTERC = StichTile(tempCeilTTLR,         tempCeilTTRL,     tempCeilTBRL,     tempCeilCornerBR);
+        var wallBELC = StichTile(tempCeilCornerTL,     tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallBERC = StichTile(tempCeilBTRL,         tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
 
         // Wall left edge top corner, right edge top corner, left edge bottom corner, right edge bottom corner
-        var wallLETC = BuildTile(tempCeilTBLL,         tempCeilCornerTR, tempCeilBTLL,     tempCeilTBLR);
-        var wallRETC = BuildTile(tempCeilCornerTL,     tempCeilTBRR,     tempCeilTBRL,     tempCeilBTRR);
-        var wallLEBC = BuildTile(tempCeilTBLL,         tempCeilBTLR,     tempCeilBTLL,     tempCeilCornerBR);
-        var wallREBC = BuildTile(tempCeilBTRL,         tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
+        var wallLETC = StichTile(tempCeilTBLL,         tempCeilCornerTR, tempCeilBTLL,     tempCeilTBLR);
+        var wallRETC = StichTile(tempCeilCornerTL,     tempCeilTBRR,     tempCeilTBRL,     tempCeilBTRR);
+        var wallLEBC = StichTile(tempCeilTBLL,         tempCeilBTLR,     tempCeilBTLL,     tempCeilCornerBR);
+        var wallREBC = StichTile(tempCeilBTRL,         tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
 
 
         // Corner top-left, top-right, bottom-left, bottom-right 
-        var cornerTL = BuildTile(tempCeilCornerTL,     tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
-        var cornerTR = BuildTile(tempCeilBTRL,         tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
-        var cornerBL = BuildTile(tempCeilBTRL,         tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
-        var cornerBR = BuildTile(tempCeilBTRL,         tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
+        var cornerTL = StichTile(tempCeilCornerTL,     tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
+        var cornerTR = StichTile(tempCeilBTRL,         tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
+        var cornerBL = StichTile(tempCeilBTRL,         tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
+        var cornerBR = StichTile(tempCeilBTRL,         tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
 
         // Corner top-left bottom-right, bottom-left top-right
-        var cornerTLBR = BuildTile(tempCeilCornerTL,   tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
-        var cornerBLTR = BuildTile(tempCeilBTRL,       tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
+        var cornerTLBR = StichTile(tempCeilCornerTL,   tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
+        var cornerBLTR = StichTile(tempCeilBTRL,       tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
 
         // Corner top
-        var cornerTLTRBL = BuildTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
-        var cornerTLTRBR = BuildTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
-        var cornerTLBLBR = BuildTile(tempCeilCornerTL, tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
-        var cornerTRBLBR = BuildTile(tempCeilBTRL,     tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
+        var cornerTLTRBL = StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
+        var cornerTLTRBR = StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
+        var cornerTLBLBR = StichTile(tempCeilCornerTL, tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
+        var cornerTRBLBR = StichTile(tempCeilBTRL,     tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
 
 
         // Build tileset
-        var tileset = BuildTileset(
+        var tileset = StichTileset(
             wallS,        empty,        cornerTBLR,                // Single Wall, Empty, Four corners
             wallTBE,      wallLRE,                                 // Wall top-bottom edge, left-right edge
             wallTLRE,     wallBLRE,     wallLTBE,     wallRTBE,    // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge, right-top-bottom edge
@@ -303,6 +282,42 @@ public class RPGMakerToRuleTile
 
         // Invert Y access again to restore the original texture order (textures index bottom-to-top)
         tileset = FlipTextureVertically(tileset);
+
+        return tileset;
+    }
+
+    public static void Generate(Object obj, bool isWall)
+    {
+        var input = obj as Texture2D;
+        if (input == null)
+        {
+            Debug.Log("<color=red>RPGMakerToRuleTile: Must select a Texture!</color>");
+            return;
+        }
+
+        // Copy texture (to get around read issues)
+        var filePath = AssetDatabase.GetAssetPath(input);
+        var rawData = File.ReadAllBytes(filePath);
+        input = new(2, 2);
+        input.LoadImage(rawData);
+
+        // Grab filename without path or suffix
+        var filePrefix = Path.GetFileNameWithoutExtension(filePath);
+
+        // Get texture folder
+        var dstPath = Path.GetDirectoryName(filePath);
+
+        // Create folder to hold rultile and tileset
+        if (!AssetDatabase.IsValidFolder(dstPath + "/" + filePrefix + ".RuleTile"))
+            AssetDatabase.CreateFolder(dstPath, filePrefix + ".RuleTile");
+        dstPath = dstPath + "/" + filePrefix + ".RuleTile";
+
+        // Setup tileset and ruletile paths
+        var tilesetPath = dstPath + "/" + filePrefix + ".png";
+        var ruleTilePath = dstPath + "/" + filePrefix + ".asset";
+
+        // Build tileset
+        var tileset = BuildTileset(input, isWall);
 
         // Save tileset asset
         SaveTileset(tileset, tilesetPath, isWall);
