@@ -129,12 +129,14 @@ public class RPGMakerToRuleTile
         var dstPath = Path.GetDirectoryName(filePath);
 
         // Create folder to hold rultile and tileset
-        AssetDatabase.CreateFolder(dstPath, filePrefix + ".RuleTile");
+        if (!AssetDatabase.IsValidFolder(dstPath + "/" + filePrefix + ".RuleTile"))
+            AssetDatabase.CreateFolder(dstPath, filePrefix + ".RuleTile");
+
         dstPath = dstPath + "/" + filePrefix + ".RuleTile";
 
         // Setup tileset and ruletile paths
         var tilesetPath = dstPath + "/" + filePrefix + ".png";
-        var ruleTilePath = dstPath + "/" + filePrefix + ".asset";   
+        var ruleTilePath = dstPath + "/" + filePrefix + ".asset";
 
         // Invert Y access so coordinates map as if the image is right-up (textures index bottom-to-top)
         input = FlipTextureVertically(input);
@@ -324,6 +326,9 @@ public class RPGMakerToRuleTile
         // Map sprites to ruletile
         for (int i = 0; i < sprites.Length; i++)
             ruleTile.m_TilingRules[i].m_Sprites[0] = sprites[i];
+
+        EditorUtility.SetDirty(ruleTile);
+        AssetDatabase.SaveAssetIfDirty(ruleTile);
     }
 }
 #endif
