@@ -76,7 +76,7 @@ public class RPGMakerToRuleTile
     public static void SavePNG(Texture2D texture, string path)
     {
         // Encode texture into PNG
-        byte[] bytes = FlipTextureVertically(texture).EncodeToPNG();
+        byte[] bytes = texture.EncodeToPNG();
 
         // For testing purposes, also write to a file in the project folder
         File.WriteAllBytes(path, bytes);
@@ -131,14 +131,13 @@ public class RPGMakerToRuleTile
         // Create folder to hold rultile and tileset
         if (!AssetDatabase.IsValidFolder(dstPath + "/" + filePrefix + ".RuleTile"))
             AssetDatabase.CreateFolder(dstPath, filePrefix + ".RuleTile");
-
         dstPath = dstPath + "/" + filePrefix + ".RuleTile";
 
         // Setup tileset and ruletile paths
         var tilesetPath = dstPath + "/" + filePrefix + ".png";
         var ruleTilePath = dstPath + "/" + filePrefix + ".asset";
 
-        // Invert Y access so coordinates map as if the image is right-up (textures index bottom-to-top)
+        // Invert Y access for easy coordinate mapping (textures index bottom-to-top, we want top-to-bottom)
         input = FlipTextureVertically(input);
 
         // Build single ceiling
@@ -301,6 +300,9 @@ public class RPGMakerToRuleTile
             cornerTLBR,   cornerBLTR,                              // Corner top-left bottom-right, bottom-left top-right
             cornerTLTRBL, cornerTLTRBR, cornerTLBLBR, cornerTRBLBR // Corner top
         );
+
+        // Invert Y access again to restore the original texture order (textures index bottom-to-top)
+        tileset = FlipTextureVertically(tileset);
 
         // Save tileset asset
         SaveTileset(tileset, tilesetPath, isWall);
