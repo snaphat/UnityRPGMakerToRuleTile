@@ -9,26 +9,27 @@ public class RPGMakerToRuleTile
 {
     const int fullSize = 48;
     const int halfSize = fullSize / 2;
+    const int frameCount = 3;
 
     [MenuItem("Assets/Create/RPGMaker/Animated Ground RuleTile", priority = 0)]
     public static void CreateAnimatedGroundRuleTile()
     {
         foreach (var obj in Selection.objects)
-            Generate(obj, false);
+            Generate(obj, true, false);
     }
 
     [MenuItem("Assets/Create/RPGMaker/Ground RuleTile", priority = 0)]
     public static void CreateGroundRuleTile()
     {
         foreach (var obj in Selection.objects)
-            Generate(obj, false);
+            Generate(obj, false, false);
     }
 
     [MenuItem("Assets/Create/RPGMaker/Wall RuleTile", priority = 0)]
     public static void CreateWallRuleTile()
     {
         foreach (var obj in Selection.objects)
-            Generate(obj, true);
+            Generate(obj, false, true);
     }
 
     static string GetScriptPath([System.Runtime.CompilerServices.CallerFilePath] string filename = null)
@@ -47,10 +48,10 @@ public class RPGMakerToRuleTile
         AssetDatabase.Refresh();
     }
 
-    public static void SaveTileset(Texture2D texture, string path, bool isWall)
+    public static void SaveTileset(Texture2D texture, string path, bool isAnimated, bool isWall)
     {
         SavePNG(texture, path);
-        var preset = AssetDatabase.LoadAssetAtPath<Preset>(GetScriptPath() + "/" + (isWall ? "Wall" : "Ground") + "TextureImporter.preset");
+        var preset = AssetDatabase.LoadAssetAtPath<Preset>(GetScriptPath() + "/" + (isAnimated ? "Animated" : "") + (isWall ? "Wall" : "Ground") + "TextureImporter.preset");
         var sprite = AssetImporter.GetAtPath(path);
         preset.ApplyTo(sprite);
         AssetDatabase.ImportAsset(path);
@@ -100,14 +101,36 @@ public class RPGMakerToRuleTile
         return texture;
     }
 
-    public static Texture2D StichTileset(params Texture2D[] textures)
+    public static Texture2D StichTilesetHorizontal(params Texture2D[] textures)
     {
-        var tileset = new Texture2D(textures[0].width * 47, textures[0].height);
+        int totalWidth = 0;
+        foreach (var texture in textures)
+            totalWidth += texture.width;
+
+        var tileset = new Texture2D(totalWidth, textures[0].height);
 
         int i = 0;
         foreach (Texture2D texture in textures)
         {
             SetPixels(tileset, texture, i * textures[0].width, 0);
+            i++;
+        }
+
+        return tileset;
+    }
+
+    public static Texture2D StichTilesetVertical(params Texture2D[] textures)
+    {
+        int totalHeight = 0;
+        foreach (var texture in textures)
+            totalHeight += texture.height;
+
+        var tileset = new Texture2D(textures[0].width, totalHeight);
+
+        int i = 0;
+        foreach (Texture2D texture in textures)
+        {
+            SetPixels(tileset, texture, 0, i * textures[0].height);
             i++;
         }
 
@@ -264,7 +287,7 @@ public class RPGMakerToRuleTile
 
 
         // Build tileset
-        var tileset = StichTileset(
+        var tileset = StichTilesetHorizontal(
             wallS,        empty,        cornerTBLR,                // Single Wall, Empty, Four corners
             wallTBE,      wallLRE,                                 // Wall top-bottom edge, left-right edge
             wallTLRE,     wallBLRE,     wallLTBE,     wallRTBE,    // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge, right-top-bottom edge
@@ -286,7 +309,7 @@ public class RPGMakerToRuleTile
         return tileset;
     }
 
-    public static void Generate(Object obj, bool isWall)
+    public static void Generate(Object obj, bool isAnimated, bool isWall)
     {
         var input = obj as Texture2D;
         if (input == null)
@@ -295,11 +318,8 @@ public class RPGMakerToRuleTile
             return;
         }
 
-        // Copy texture (to get around read issues)
+        // Get texture path
         var filePath = AssetDatabase.GetAssetPath(input);
-        var rawData = File.ReadAllBytes(filePath);
-        input = new(2, 2);
-        input.LoadImage(rawData);
 
         // Grab filename without path or suffix
         var filePrefix = Path.GetFileNameWithoutExtension(filePath);
@@ -316,11 +336,32 @@ public class RPGMakerToRuleTile
         var tilesetPath = dstPath + "/" + filePrefix + ".png";
         var ruleTilePath = dstPath + "/" + filePrefix + ".asset";
 
-        // Build tileset
-        var tileset = BuildTileset(input, isWall);
+        // Copy texture (to get around read issues)
+        var rawData = File.ReadAllBytes(filePath);
+        input = new(2, 2);
+        input.LoadImage(rawData);
+
+        Texture2D tileset;
+        if (!isAnimated)
+        {
+            // Build tileset
+            tileset = BuildTileset(input, isWall);
+        }
+        else
+        {
+            // Build frames
+            Texture2D[] frames = new Texture2D[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                var frame = GetTexture2D(input, i * (input.width / 3), 0, input.width / 3, input.height);
+                frames[i] = BuildTileset(frame, isWall);
+            }
+
+            tileset = StichTilesetVertical(frames);
+        }
 
         // Save tileset asset
-        SaveTileset(tileset, tilesetPath, isWall);
+        SaveTileset(tileset, tilesetPath, isAnimated, isWall);
         Debug.Log($"<color=magenta>RPGMakerToRuleTile</color>: <color=cyan>created tileset at </color><color=orange>'{tilesetPath}'</color>");
 
         // Load sprites from asset
@@ -340,9 +381,28 @@ public class RPGMakerToRuleTile
             Debug.Log($"<color=magenta>RPGMakerToRuleTile</color>: <color=cyan>used existing RuleTile at </color><color=orange>'{ruleTilePath}'</color>");
         }
 
-        // Map sprites to ruletile
-        for (int i = 0; i < sprites.Length; i++)
-            ruleTile.m_TilingRules[i].m_Sprites[0] = sprites[i];
+        // Map sprites to ruletile (47 sprites per ruletile)
+        for (int i = 0; i < 47; i++)
+        {
+            if (!isAnimated)
+            {
+                // Setup tiling rule for single sprites
+                ruleTile.m_TilingRules[i].m_Output = RuleTile.TilingRuleOutput.OutputSprite.Single;
+                ruleTile.m_TilingRules[i].m_Sprites[0] = sprites[i];
+            }
+            else
+            {
+                // Setup tiling rule for animations
+                ruleTile.m_TilingRules[i].m_Output = RuleTile.TilingRuleOutput.OutputSprite.Animation;
+                ruleTile.m_TilingRules[i].m_MinAnimationSpeed = 2;
+                ruleTile.m_TilingRules[i].m_MaxAnimationSpeed = 2;
+                ruleTile.m_TilingRules[i].m_Sprites = new Sprite[frameCount];
+
+                // Set sprites
+                for (int j = 0; j < frameCount; j++)
+                    ruleTile.m_TilingRules[i].m_Sprites[j] = sprites[i + j * 47];
+            }
+        }
 
         EditorUtility.SetDirty(ruleTile);
         AssetDatabase.SaveAssetIfDirty(ruleTile);
