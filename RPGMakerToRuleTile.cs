@@ -96,44 +96,45 @@ public class RPGMakerToRuleTile
     [MenuItem("Assets/Create/RPGMaker/Ground RuleTile", priority = 0)]
     public static void CreateGroundRuleTile()
     {
-        Generate(false);
+        foreach(var obj in Selection.objects)
+            Generate(obj, false);
     }
 
     [MenuItem("Assets/Create/RPGMaker/Wall RuleTile", priority = 0)]
     public static void CreateWallRuleTile()
     {
-        Generate(true);
+        foreach(var obj in Selection.objects)
+            Generate(obj, true);
     }
 
-    public static void Generate(bool isWall)
+    public static void Generate(Object obj, bool isWall)
     {
-
-        string filePath = EditorUtility.OpenFilePanel("Overwrite with png", "", "png");
-        if (filePath == null)
+        var input = obj as Texture2D;
+        if (input == null)
         {
-            Debug.Log("<color=red>RPGMakerToRuleTile: Must select a file!</color>");
+            Debug.Log("<color=red>RPGMakerToRuleTile: Must select a Texture!</color>");
             return;
         }
 
-        // Load PNG into texture
+        // Copy texture (to get around read issues)
+        var filePath = AssetDatabase.GetAssetPath(input);
         var rawData = File.ReadAllBytes(filePath);
-        Texture2D input = new(2, 2);
+        input = new(2, 2);
         input.LoadImage(rawData);
-
-        Debug.Log(input);
-
 
         // Grab filename without path or suffix
         var filePrefix = Path.GetFileNameWithoutExtension(filePath);
 
-        // Get current 'Project View' folder
-        var dstPath = AssetDatabase.GetAssetPath(Selection.activeInstanceID);
-        if (dstPath.Contains(".")) dstPath = dstPath.Remove(dstPath.LastIndexOf('/'));
+        // Get texture folder
+        var dstPath = Path.GetDirectoryName(filePath);
+
+        // Create folder to hold rultile and tileset
+        AssetDatabase.CreateFolder(dstPath, filePrefix + ".RuleTile");
+        dstPath = dstPath + "/" + filePrefix + ".RuleTile";
 
         // Setup tileset and ruletile paths
         var tilesetPath = dstPath + "/" + filePrefix + ".png";
-        var ruleTilePath = dstPath + "/" + filePrefix + ".asset";
-
+        var ruleTilePath = dstPath + "/" + filePrefix + ".asset";   
 
         // Invert Y access so coordinates map as if the image is right-up (textures index bottom-to-top)
         input = FlipTextureVertically(input);
