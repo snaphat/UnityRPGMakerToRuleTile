@@ -3542,7 +3542,7 @@ Preset:
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: m_SpriteSheet.m_Sprites.Array.data[30].m_PhysicsShape.Array.data[0].Array.data[0].y
-    value: 24
+    value: -24
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: m_SpriteSheet.m_Sprites.Array.data[30].m_PhysicsShape.Array.data[0].Array.data[1].x
@@ -3566,7 +3566,7 @@ Preset:
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: m_SpriteSheet.m_Sprites.Array.data[30].m_PhysicsShape.Array.data[0].Array.data[3].y
-    value: 24
+    value: -24
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: m_SpriteSheet.m_Sprites.Array.data[30].m_TessellationDetail
