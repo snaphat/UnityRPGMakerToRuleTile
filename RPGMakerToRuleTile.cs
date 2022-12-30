@@ -361,7 +361,7 @@ public class RPGMakerToRuleTile
             for (int i = 0; i < frameCount; i++)
             {
                 var frame = GetTexture2D(input, i * (input.width / 3), 0, input.width / 3, input.height);
-                frames[i] = BuildTileset(frame, isWall);
+                frames[frameCount - i - 1] = BuildTileset(frame, isWall); // Invert Y since we reversed the texture
             }
 
             tileset = StichTilesetVertical(frames);
