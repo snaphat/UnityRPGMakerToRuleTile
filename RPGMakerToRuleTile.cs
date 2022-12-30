@@ -11,13 +11,6 @@ public class RPGMakerToRuleTile
     const int halfSize = fullSize / 2;
     const int frameCount = 3;
 
-    [MenuItem("Assets/Create/RPGMaker/Animated Ground RuleTile", priority = 0)]
-    public static void CreateAnimatedGroundRuleTile()
-    {
-        foreach (var obj in Selection.objects)
-            Generate(obj, true, false);
-    }
-
     [MenuItem("Assets/Create/RPGMaker/Ground RuleTile", priority = 0)]
     public static void CreateGroundRuleTile()
     {
@@ -25,11 +18,25 @@ public class RPGMakerToRuleTile
             Generate(obj, false, false);
     }
 
-    [MenuItem("Assets/Create/RPGMaker/Wall RuleTile", priority = 0)]
+    [MenuItem("Assets/Create/RPGMaker/Animated Ground RuleTile", priority = 1)]
+    public static void CreateAnimatedGroundRuleTile()
+    {
+        foreach (var obj in Selection.objects)
+            Generate(obj, true, false);
+    }
+
+    [MenuItem("Assets/Create/RPGMaker/Wall RuleTile", priority = 2)]
     public static void CreateWallRuleTile()
     {
         foreach (var obj in Selection.objects)
             Generate(obj, false, true);
+    }
+
+    [MenuItem("Assets/Create/RPGMaker/Animated Wall RuleTile", priority = 3)]
+    public static void CreateAnimatedWallRuleTile()
+    {
+        foreach (var obj in Selection.objects)
+            Generate(obj, true, true);
     }
 
     static string GetScriptPath([System.Runtime.CompilerServices.CallerFilePath] string filename = null)
