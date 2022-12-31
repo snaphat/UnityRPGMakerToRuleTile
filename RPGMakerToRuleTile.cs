@@ -112,15 +112,18 @@ public class RPGMakerToRuleTile
     {
         int totalWidth = 0;
         foreach (var texture in textures)
-            totalWidth += texture.width;
+            if (texture != null) totalWidth += texture.width;
 
         var tileset = new Texture2D(totalWidth, textures[0].height);
 
         int i = 0;
         foreach (Texture2D texture in textures)
         {
-            SetPixels(tileset, texture, i * textures[0].width, 0);
-            i++;
+            if (texture != null)
+            {
+                SetPixels(tileset, texture, i * textures[0].width, 0);
+                i++;
+            }
         }
 
         return tileset;
@@ -218,96 +221,129 @@ public class RPGMakerToRuleTile
         if (isWall) SetPixels(wallS, tempWallS, 0, fullSize);
 
         // Empty
-        var empty = StichTile(tempCeilBTRL,            tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
+        var empty = StichTile(              tempCeilBTRL,     tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
 
         // Four corners
-        var cornerTBLR = StichTile(tempCeilCornerTL,   tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
+        var cornerTBLR = StichTile(         tempCeilCornerTL, tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
 
-        // Wall top-bottom edge, left-right edge
-        var wallTBE = StichTile(tempCeilTTLR,          tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
-        var wallLRE = StichTile(tempCeilTBLL,          tempCeilTBRR,     tempCeilBTLL,     tempCeilBTRR);
+        // Wall top-bottom edge (middle, left, right, single), left-right edge
+        var wallTBE  = StichTile(           tempCeilTTLR,     tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallTBEL = isWall ? StichTile(  tempCeilTTLR,     tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallL) : null;
+        var wallTBER = isWall ? StichTile(  tempCeilTTLR,     tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallR) : null;
+        var wallTBES = isWall ? StichTile(  tempCeilTTLR,     tempCeilTTRL,     tempCeilBBLR,     tempCeilBBRL, tempWallS) : null;
+        var wallLRE  = StichTile(           tempCeilTBLL,     tempCeilTBRR,     tempCeilBTLL,     tempCeilBTRR);
 
-        // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge, right-top-bottom edge
-        var wallTLRE = StichTile(tempCeilTTLL,         tempCeilTTRR,     tempCeilTBLL,     tempCeilTBRR);
-        var wallBLRE = StichTile(tempCeilBTLL,         tempCeilBTRR,     tempCeilBBLL,     tempCeilBBRR, tempWallS);
-        var wallLTBE = StichTile(tempCeilTTLL,         tempCeilTTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
-        var wallRTBE = StichTile(tempCeilTTRL,         tempCeilTTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge (left, single), right-top-bottom edge (right, single)
+        var wallTLRE  = StichTile(          tempCeilTTLL,     tempCeilTTRR,     tempCeilTBLL,     tempCeilTBRR);
+        var wallBLRE  = StichTile(          tempCeilBTLL,     tempCeilBTRR,     tempCeilBBLL,     tempCeilBBRR, tempWallS);
+        var wallLTBE  = StichTile(          tempCeilTTLL,     tempCeilTTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
+        var wallLTBES = isWall ? StichTile( tempCeilTTLL,     tempCeilTTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallS) : null;
+        var wallRTBE  = StichTile(          tempCeilTTRL,     tempCeilTTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        var wallRTBES = isWall ? StichTile( tempCeilTTRL,     tempCeilTTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallS) : null;
 
-        // Wall top edge, bottom edge, left edge, right edge
-        var wallTE = StichTile(tempCeilTTRL,           tempCeilTTLR,     tempCeilTBRL,     tempCeilTBLR);
-        var wallBE = StichTile(tempCeilBTRL,           tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallM);
-        var wallLE = StichTile(tempCeilBTLL,           tempCeilBTLR,     tempCeilTBLL,     tempCeilTBLR);
-        var wallRE = StichTile(tempCeilBTRL,           tempCeilBTRR,     tempCeilTBRL,     tempCeilTBRR);
+        // Wall top edge, bottom edge (middle, left, right, single), left edge, right edge
+        var wallTE  = StichTile(            tempCeilTTRL,     tempCeilTTLR,     tempCeilTBRL,     tempCeilTBLR);
+        var wallBE  = StichTile(            tempCeilBTRL,     tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallM);
+        var wallBEL = isWall ? StichTile(   tempCeilBTRL,     tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallL) : null;
+        var wallBER = isWall ? StichTile(   tempCeilBTRL,     tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallR) : null;
+        var wallBES = isWall ? StichTile(   tempCeilBTRL,     tempCeilBTLR,     tempCeilBBRL,     tempCeilBBLR, tempWallS) : null;
+        var wallLE  = StichTile(            tempCeilBTLL,     tempCeilBTLR,     tempCeilTBLL,     tempCeilTBLR);
+        var wallRE  = StichTile(            tempCeilBTRL,     tempCeilBTRR,     tempCeilTBRL,     tempCeilTBRR);
 
-        // Wall top edge left-right corners, bottom edge left-right corners, left edge top bottom corners, right edge top bottom corners
-        var wallTELRC = StichTile(tempCeilTTLR,        tempCeilTTRL,     tempCeilCornerBL, tempCeilCornerBR);
-        var wallBELRC = StichTile(tempCeilCornerTL,    tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
-        var wallLETBC = StichTile(tempCeilTBLL,        tempCeilCornerTR, tempCeilBTLL,     tempCeilCornerBR);
-        var wallRETBC = StichTile(tempCeilCornerTL,    tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
+        // Wall top edge left-right corners, bottom edge left-right corners (middle, left, right, single), left edge top bottom corners, right edge top bottom corners
+        var wallTELRC  = StichTile(         tempCeilTTLR,     tempCeilTTRL,     tempCeilCornerBL, tempCeilCornerBR);
+        var wallBELRC  = StichTile(         tempCeilCornerTL, tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallBELRCL = isWall ? StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallL) : null;
+        var wallBELRCR = isWall ? StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallR) : null;
+        var wallBELRCS = isWall ? StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallS) : null;
+        var wallLETBC  = StichTile(         tempCeilTBLL,     tempCeilCornerTR, tempCeilBTLL,     tempCeilCornerBR);
+        var wallRETBC  = StichTile(         tempCeilCornerTL, tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
 
         // Wall top corners, bottom corners, left corners, right corners 
-        var wallTC = StichTile(tempCeilCornerTL,       tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
-        var wallBC = StichTile(tempCeilBTRL,           tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
-        var wallLC = StichTile(tempCeilCornerTL,       tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
-        var wallRC = StichTile(tempCeilBTRL,           tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
+        var wallTC = StichTile(             tempCeilCornerTL, tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
+        var wallBC = StichTile(             tempCeilBTRL,     tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
+        var wallLC = StichTile(             tempCeilCornerTL, tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
+        var wallRC = StichTile(             tempCeilBTRL,     tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
 
-        // Wall top-left edge, top-right edge, bottom-left edge, bottom-right edge
-        var wallTLE = StichTile(tempCeilTTLL,          tempCeilTTLR,     tempCeilTBLL,     tempCeilTBLR);
-        var wallTRE = StichTile(tempCeilTTRL,          tempCeilTTRR,     tempCeilTBRL,     tempCeilTBRR);
-        var wallBLE = StichTile(tempCeilBTLL,          tempCeilBTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
-        var wallBRE = StichTile(tempCeilBTRL,          tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        // Wall top-left edge, top-right edge, bottom-left edge (left, single), bottom-right edge (right single)
+        var wallTLE  = StichTile(           tempCeilTTLL,     tempCeilTTLR,     tempCeilTBLL,     tempCeilTBLR);
+        var wallTRE  = StichTile(           tempCeilTTRL,     tempCeilTTRR,     tempCeilTBRL,     tempCeilTBRR);
+        var wallBLE  = StichTile(           tempCeilBTLL,     tempCeilBTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallL);
+        var wallBLES = isWall ? StichTile(  tempCeilBTLL,     tempCeilBTLR,     tempCeilBBLL,     tempCeilBBLR, tempWallS) : null;
+        var wallBRE  = StichTile(           tempCeilBTRL,     tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        var wallBRES = isWall ? StichTile(  tempCeilBTRL,     tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallS) : null;
 
-        // Wall top-left edge w/ corner, top-right edge w/ corner, bottom-left edge /w corner, bottom-right edge w/ corner
-        var wallTLEC = StichTile(tempCeilTTLL,         tempCeilTTLR,     tempCeilTBLL,     tempCeilCornerBR);
-        var wallTREC = StichTile(tempCeilTTRL,         tempCeilTTRR,     tempCeilCornerBL, tempCeilTBRR);
-        var wallBLEC = StichTile(tempCeilBTLL,         tempCeilCornerTR, tempCeilBBLL,     tempCeilBBLR, tempWallL);
-        var wallBREC = StichTile(tempCeilCornerTL,     tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        // Wall top-left edge w/ corner, top-right edge w/ corner, bottom-left edge /w corner (left, single), bottom-right edge w/ corner (right, single)
+        var wallTLEC  = StichTile(          tempCeilTTLL,     tempCeilTTLR,     tempCeilTBLL,     tempCeilCornerBR);
+        var wallTREC  = StichTile(          tempCeilTTRL,     tempCeilTTRR,     tempCeilCornerBL, tempCeilTBRR);
+        var wallBLEC  = StichTile(          tempCeilBTLL,     tempCeilCornerTR, tempCeilBBLL,     tempCeilBBLR, tempWallL);
+        var wallBLECS = isWall? StichTile(  tempCeilBTLL,     tempCeilCornerTR, tempCeilBBLL,     tempCeilBBLR, tempWallS) : null;
+        var wallBREC  = StichTile(          tempCeilCornerTL, tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallR);
+        var wallBRECS = isWall? StichTile(  tempCeilCornerTL, tempCeilBTRR,     tempCeilBBRL,     tempCeilBBRR, tempWallS) : null;
 
-        // Wall top edge left corner, top edge right corner, bottom edge left corner, bottom edge right corner
-        var wallTELC = StichTile(tempCeilTTLR,         tempCeilTTRL,     tempCeilCornerBL, tempCeilTBLR);
-        var wallTERC = StichTile(tempCeilTTLR,         tempCeilTTRL,     tempCeilTBRL,     tempCeilCornerBR);
-        var wallBELC = StichTile(tempCeilCornerTL,     tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
-        var wallBERC = StichTile(tempCeilBTRL,         tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        // Wall top edge left corner, top edge right corner, bottom edge left corner (middle, left, right, single), bottom edge right corner (middle, left, right, single)
+        var wallTELC  = StichTile(          tempCeilTTLR,     tempCeilTTRL,     tempCeilCornerBL, tempCeilTBLR);
+        var wallTERC  = StichTile(          tempCeilTTLR,     tempCeilTTRL,     tempCeilTBRL,     tempCeilCornerBR);
+        var wallBELC  = StichTile(          tempCeilCornerTL, tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallBELCL = isWall ? StichTile( tempCeilCornerTL, tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallL) : null;
+        var wallBELCR = isWall ? StichTile( tempCeilCornerTL, tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallR) : null;
+        var wallBELCS = isWall ? StichTile( tempCeilCornerTL, tempCeilBTLR,     tempCeilBBLR,     tempCeilBBRL, tempWallS) : null;
+        var wallBERC  = StichTile(          tempCeilBTRL,     tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallM);
+        var wallBERCL = isWall ? StichTile( tempCeilBTRL,     tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallL) : null;
+        var wallBERCR = isWall ? StichTile( tempCeilBTRL,     tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallR) : null;
+        var wallBERCS = isWall ? StichTile( tempCeilBTRL,     tempCeilCornerTR, tempCeilBBLR,     tempCeilBBRL, tempWallS) : null;
 
         // Wall left edge top corner, right edge top corner, left edge bottom corner, right edge bottom corner
-        var wallLETC = StichTile(tempCeilTBLL,         tempCeilCornerTR, tempCeilBTLL,     tempCeilTBLR);
-        var wallRETC = StichTile(tempCeilCornerTL,     tempCeilTBRR,     tempCeilTBRL,     tempCeilBTRR);
-        var wallLEBC = StichTile(tempCeilTBLL,         tempCeilBTLR,     tempCeilBTLL,     tempCeilCornerBR);
-        var wallREBC = StichTile(tempCeilBTRL,         tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
+        var wallLETC = StichTile(           tempCeilTBLL,     tempCeilCornerTR, tempCeilBTLL,     tempCeilTBLR);
+        var wallRETC = StichTile(           tempCeilCornerTL, tempCeilTBRR,     tempCeilTBRL,     tempCeilBTRR);
+        var wallLEBC = StichTile(           tempCeilTBLL,     tempCeilBTLR,     tempCeilBTLL,     tempCeilCornerBR);
+        var wallREBC = StichTile(           tempCeilBTRL,     tempCeilTBRR,     tempCeilCornerBL, tempCeilBTRR);
 
 
         // Corner top-left, top-right, bottom-left, bottom-right 
-        var cornerTL = StichTile(tempCeilCornerTL,     tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
-        var cornerTR = StichTile(tempCeilBTRL,         tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
-        var cornerBL = StichTile(tempCeilBTRL,         tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
-        var cornerBR = StichTile(tempCeilBTRL,         tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
+        var cornerTL = StichTile(           tempCeilCornerTL, tempCeilBTLR,     tempCeilTBRL,     tempCeilTBLR);
+        var cornerTR = StichTile(           tempCeilBTRL,     tempCeilCornerTR, tempCeilTBRL,     tempCeilTBLR);
+        var cornerBL = StichTile(           tempCeilBTRL,     tempCeilBTLR,     tempCeilCornerBL, tempCeilTBLR);
+        var cornerBR = StichTile(           tempCeilBTRL,     tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
 
         // Corner top-left bottom-right, bottom-left top-right
-        var cornerTLBR = StichTile(tempCeilCornerTL,   tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
-        var cornerBLTR = StichTile(tempCeilBTRL,       tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
+        var cornerTLBR = StichTile(         tempCeilCornerTL, tempCeilBTLR,     tempCeilTBRL,     tempCeilCornerBR);
+        var cornerBLTR = StichTile(         tempCeilBTRL,     tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
 
         // Corner top
-        var cornerTLTRBL = StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
-        var cornerTLTRBR = StichTile(tempCeilCornerTL, tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
-        var cornerTLBLBR = StichTile(tempCeilCornerTL, tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
-        var cornerTRBLBR = StichTile(tempCeilBTRL,     tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
-
+        var cornerTLTRBL = StichTile(       tempCeilCornerTL, tempCeilCornerTR, tempCeilCornerBL, tempCeilTBLR);
+        var cornerTLTRBR = StichTile(       tempCeilCornerTL, tempCeilCornerTR, tempCeilTBRL,     tempCeilCornerBR);
+        var cornerTLBLBR = StichTile(       tempCeilCornerTL, tempCeilBTLR,     tempCeilCornerBL, tempCeilCornerBR);
+        var cornerTRBLBR = StichTile(       tempCeilBTRL,     tempCeilCornerTR, tempCeilCornerBL, tempCeilCornerBR);
 
         // Build tileset
         var tileset = StichTilesetHorizontal(
-            wallS,        empty,        cornerTBLR,                // Single Wall, Empty, Four corners
-            wallTBE,      wallLRE,                                 // Wall top-bottom edge, left-right edge
-            wallTLRE,     wallBLRE,     wallLTBE,     wallRTBE,    // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge, right-top-bottom edge
-            wallTE,       wallBE,       wallLE,       wallRE,      // Wall top edge, bottom edge, left edge, right edge
-            wallTELRC,    wallBELRC,    wallLETBC,    wallRETBC,   // Wall top edge left-right corners, bottom edge left-right corners, left edge top bottom corners, right edge top bottom corners
-            wallTC,       wallBC,       wallLC,       wallRC,      // Wall top corners, bottom corners, left corners, right corners 
-            wallTLE,      wallTRE,      wallBLE,      wallBRE,     // Wall top-left edge, top-right edge, bottom-left edge, bottom-right edge
-            wallTLEC,     wallTREC,     wallBLEC,     wallBREC,    // Wall top-left edge w/ corner, top-right edge w/ corner, bottom-left edge /w corner, bottom-right edge w/ corner
-            wallTELC,     wallTERC,     wallBELC,     wallBERC,    // Wall top edge left corner, top edge right corner, bottom edge left corner, bottom edge right corner
-            wallLETC,     wallRETC,     wallLEBC,     wallREBC,    // Wall left edge top corner, right edge top corner, left edge bottom corner, right edge bottom corner
-            cornerTL,     cornerTR,     cornerBL,     cornerBR,    // Corner top-left, top-right, bottom-left, bottom-right 
-            cornerTLBR,   cornerBLTR,                              // Corner top-left bottom-right, bottom-left top-right
-            cornerTLTRBL, cornerTLTRBR, cornerTLBLBR, cornerTRBLBR // Corner top
+            // Single Wall, Empty, Four corners
+            wallS,        empty,        cornerTBLR,
+            // Wall top-bottom edge (middle, left, right, single), left-right edge
+            wallTBE,      wallTBEL,     wallTBER,     wallTBES,   wallLRE,
+            // Wall top-left-right edge, bottom-left-right edge, left-top-bottom edge (left, single), right-top-bottom edge (right, single)
+            wallTLRE,     wallBLRE,     wallLTBE,     wallLTBES,  wallRTBE,   wallRTBES,
+            // Wall top edge, bottom edge (middle, left, right, single), left edge, right edge
+            wallTE,       wallBE,       wallBEL,      wallBER,    wallBES,    wallLE,    wallRE,
+            // Wall top edge left-right corners, bottom edge left-right corners (middle, left, right, single), left edge top bottom corners, right edge top bottom corners
+            wallTELRC,    wallBELRC,    wallBELRCL,   wallBELRCR, wallBELRCS, wallLETBC, wallRETBC,                                 
+            // Wall top corners, bottom corners, left corners, right corners
+            wallTC,       wallBC,       wallLC,       wallRC,
+            // Wall top-left edge, top-right edge, bottom-left edge (left, single), bottom-right edge (right single)
+            wallTLE,      wallTRE,      wallBLE,      wallBLES,   wallBRE,    wallBRES,
+            // Wall top-left edge w/ corner, top-right edge w/ corner, bottom-left edge /w corner (left, single), bottom-right edge w/ corner (right, single)
+            wallTLEC,     wallTREC,     wallBLEC,     wallBLECS,  wallBREC,   wallBRECS,
+            // Wall top edge left corner, top edge right corner, bottom edge left corner (middle, left, right, single), bottom edge right corner (middle, left, right, single)
+            wallTELC,     wallTERC,     wallBELC,     wallBELCL,  wallBELCR,  wallBELCS, wallBERC, wallBERCL, wallBERCR, wallBERCS,
+            // Wall left edge top corner, right edge top corner, left edge bottom corner, right edge bottom corner
+            wallLETC,     wallRETC,     wallLEBC,     wallREBC,
+            // Corner top-left, top-right, bottom-left, bottom-right
+            cornerTL,     cornerTR,     cornerBL,     cornerBR,
+            // Corner top-left bottom-right, bottom-left top-right
+            cornerTLBR,   cornerBLTR,
+            // Corner top
+            cornerTLTRBL, cornerTLTRBR, cornerTLBLBR, cornerTRBLBR
         );
 
         // Invert Y access again to restore the original texture order (textures index bottom-to-top)
@@ -379,7 +415,7 @@ public class RPGMakerToRuleTile
         ruleTile = AssetDatabase.LoadAssetAtPath<RuleTile>(dstPath + "/" + filePrefix + ".asset");
         if (ruleTile == null)
         {
-            AssetDatabase.CopyAsset(GetScriptPath() + "/EmptyRuleTile.asset", ruleTilePath);
+            AssetDatabase.CopyAsset(GetScriptPath() + "/" + (isWall ? "Wall" : "Ground") + "EmptyRuleTile.asset", ruleTilePath);
             ruleTile = AssetDatabase.LoadAssetAtPath<RuleTile>(ruleTilePath);
             Debug.Log($"<color=magenta>RPGMakerToRuleTile</color>: <color=cyan>created RuleTile at </color><color=orange>'{ruleTilePath}'</color>");
         }
@@ -388,8 +424,9 @@ public class RPGMakerToRuleTile
             Debug.Log($"<color=magenta>RPGMakerToRuleTile</color>: <color=cyan>used existing RuleTile at </color><color=orange>'{ruleTilePath}'</color>");
         }
 
-        // Map sprites to ruletile (47 sprites per ruletile)
-        for (int i = 0; i < 47; i++)
+        // Map sprites to ruletile (68 sprites per wall ruletile || 47 sprites per ground rultile )
+        var count = isWall ? 68 : 47;
+        for (int i = 0; i < count; i++)
         {
             if (!isAnimated)
             {
